@@ -13,35 +13,23 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Hardware;
 import java.util.function.Supplier;
 
-public class ArmPivot extends SubsystemBase {
-  // Presets
-  public static final int PRESET_L1 = 0;
-  public static final int PRESET_L2_L3 = 35;
-  public static final int PRESET_L4 = 90;
-  public static final int HARDSTOP_HIGH = 90;
-  public static final int HARDSTOP_LOW = 0;
-  public static final double PLACEHOLDER_CORAL_WEIGHT_KG = 0.8;
-  public static final double PLACEHOLDER_ALGAE_WEIGHT_KG = 1.5;
-
+public class SpinnyClaw extends SubsystemBase {
   // Remove once we implement PID speed
   public static int placeholderPIDSpeed;
 
   // TalonFX
   private final TalonFX motor;
 
-  public ArmPivot() {
-    motor = new TalonFX(Hardware.ARM_PIVOT_MOTOR_ID);
+  public SpinnyClaw() {
+    motor = new TalonFX(Hardware.SPINNY_CLAW_MOTOR_ID);
     factoryDefaults();
   }
 
   // (+) is to move arm up, and (-) is down
-  public Command startMovingVoltage(Supplier<Voltage> speedControl) {
-    return run(() -> motor.setVoltage(speedControl.get().in(Volts)));
+  public Command movingVoltage(Supplier<Voltage> speedControl) {
+    return run(() -> motor.setVoltage(speedControl.get().in(Volts)))
+        .finallyDo(() -> motor.setVoltage(0));
   }
-
-  public void moveArmCoral(int preset) {}
-
-  public void moveArmAlgae(int preset) {}
 
   // TalonFX config
   public void factoryDefaults() {
@@ -49,7 +37,6 @@ public class ArmPivot extends SubsystemBase {
     TalonFXConfigurator cfg = motor.getConfigurator();
     var currentLimits = new CurrentLimitsConfigs();
     configuration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    configuration.ClosedLoopGeneral.ContinuousWrap = true;
     cfg.apply(configuration);
     // enabling stator current limits
     currentLimits.StatorCurrentLimit = 5; // starting low for testing
