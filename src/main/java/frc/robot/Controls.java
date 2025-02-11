@@ -6,6 +6,9 @@ import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.generated.BonkTunerConstants;
+import frc.robot.generated.CompTunerConstants;
+import frc.robot.subsystems.ElevatorSubsystem;
+import frc.robot.util.RobotType;
 
 public class Controls {
   private static final int DRIVER_CONTROLLER_PORT = 0;
@@ -22,7 +25,10 @@ public class Controls {
 
   // Swerve stuff
   private double MaxSpeed =
-      BonkTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+      RobotType.getCurrent() == RobotType.BONK
+          ? BonkTunerConstants.kSpeedAt12Volts.in(MetersPerSecond)
+          : CompTunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+  // kSpeedAt12Volts desired top speed
   private double MaxAngularRate =
       RotationsPerSecond.of(0.75)
           .in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
@@ -46,6 +52,7 @@ public class Controls {
     configureDrivebaseBindings();
     configureElevatorBindings();
     configureArmPivotBindings();
+    configureClimbPivotBindings();
     configureSpinnyClawBindings();
   }
 
@@ -71,6 +78,7 @@ public class Controls {
                         -driverController.getRightX()
                             * MaxAngularRate) // Drive counterclockwise with negative X (left)
             ));
+    s.drivebaseSubsystem.applyRequest(() -> brake).ignoringDisable(true).schedule();
 
     // driveController.a().whileTrue(s.drivebaseSubsystem.applyRequest(() -> brake));
     // driveController.b().whileTrue(s.drivebaseSubsystem.applyRequest(() ->
@@ -90,17 +98,39 @@ public class Controls {
       return;
     }
     // Controls binding goes here
-    operatorController.leftTrigger().whileTrue(s.elevatorSubsystem.goUp());
-    operatorController.rightTrigger().whileTrue(s.elevatorSubsystem.goDown());
+    operatorController.leftTrigger().whileTrue(s.elevatorSubsystem.goUpPower());
+    operatorController.rightTrigger().whileTrue(s.elevatorSubsystem.goDownPower());
+    operatorController.y().onTrue(s.elevatorSubsystem.setLevel(ElevatorSubsystem.LEVEL_FOUR_POS));
+    operatorController.x().onTrue(s.elevatorSubsystem.setLevel(ElevatorSubsystem.LEVEL_THREE_POS));
+    operatorController.b().onTrue(s.elevatorSubsystem.setLevel(ElevatorSubsystem.LEVEL_TWO_POS));
+    operatorController.a().onTrue(s.elevatorSubsystem.setLevel(ElevatorSubsystem.LEVEL_ONE_POS));
+    operatorController.povUp().whileTrue(s.elevatorSubsystem.goUp());
+    operatorController.povDown().whileTrue(s.elevatorSubsystem.goDown());
   }
 
   private void configureArmPivotBindings() {
     if (s.armPivotSubsystem == null) {
       return;
     }
+
     // Arm Controls binding goes here
     s.armPivotSubsystem.setDefaultCommand(
         s.armPivotSubsystem.startMovingVoltage(() -> Volts.of(6 * operatorController.getLeftY())));
+  }
+
+  private void configureClimbPivotBindings() {
+    if (s.climbPivotSubsystem == null) {
+      return;
+    }
+
+    operatorController
+        .start()
+        .onTrue(
+            s.climbPivotSubsystem
+                .moveClimbMotor(0.1)
+                .withTimeout(0.5)
+                .andThen(s.climbPivotSubsystem.moveClimbMotor(-0.1))
+                .withTimeout(0.5));
   }
 
   private void configureSpinnyClawBindings() {
